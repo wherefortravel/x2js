@@ -148,6 +148,10 @@
 			if (config.jsDateUTC === undefined) {
 				config.jsDateUTC = false;
 			}
+
+			if (config.textAttribute === undefined) {
+				config.textAttribute = '__text'
+			}
 		}
 
 		function initRequiredPolyfills() {
@@ -385,24 +389,24 @@
 			}
 
 			if (result["#text"]) {
-				result.__text = result["#text"];
+				result[config.textAttribute] = result["#text"];
 
-				if (result.__text instanceof Array) {
-					result.__text = result.__text.join("\n");
+				if (result[config.textAttribute] instanceof Array) {
+					result[config.textAttribute] = result[config.textAttribute].join("\n");
 				}
 
 				if (config.escapeMode)
-					result.__text = unescapeXmlChars(result.__text);
+					result[config.textAttribute] = unescapeXmlChars(result[config.textAttribute]);
 
 				if (config.stripWhitespaces)
-					result.__text = result.__text.trim();
+					result[config.textAttribute] = result[config.textAttribute].trim();
 
 				delete result["#text"];
 
 				if (config.arrayAccessForm === "property")
 					delete result["#text_asArray"];
 
-				result.__text = convertToDateIfRequired(result.__text, "#text", elementPath + ".#text");
+				result[config.textAttribute] = convertToDateIfRequired(result[config.textAttribute], "#text", elementPath + ".#text");
 			}
 
 			if (result.hasOwnProperty('#cdata-section')) {
@@ -413,13 +417,13 @@
 					delete result["#cdata-section_asArray"];
 			}
 
-			if (result.__cnt === 1 && result.__text && !config.keepText) {
-				result = result.__text;
+			if (result.__cnt === 1 && result[config.textAttribute] && !config.keepText) {
+				result = result[config.textAttribute];
 			} else if (result.__cnt === 0 && config.emptyNodeForm === "text") {
 				result = '';
-			} else if (result.__cnt > 1 && result.__text !== undefined && config.skipEmptyTextNodesForObj) {
-				if (config.stripWhitespaces && result.__text === "" || result.__text.trim() === "") {
-					delete result.__text;
+			} else if (result.__cnt > 1 && result[config.textAttribute] !== undefined && config.skipEmptyTextNodesForObj) {
+				if (config.stripWhitespaces && result[config.textAttribute] === "" || result[config.textAttribute].trim() === "") {
+					delete result[config.textAttribute];
 				}
 			}
 			delete result.__cnt;
@@ -429,13 +433,13 @@
 			 * But, if we have a property inside xml tag (<tag PROPERTY="1"></tag>), and a cdata inside, we can't ignore it.
 			 * In this case we are keeping __cdata property.
 			 */
-			if (!config.keepCData && (!result.hasOwnProperty('__text') && result.hasOwnProperty('__cdata') && Object.keys(result).length === 1)) {
+			if (!config.keepCData && (!result.hasOwnProperty(config.textAttribute) && result.hasOwnProperty('__cdata') && Object.keys(result).length === 1)) {
 				return (result.__cdata ? result.__cdata : '');
 			}
 
-			if (config.enableToStringFunc && (result.__text || result.__cdata)) {
+			if (config.enableToStringFunc && (result[config.textAttribute] || result.__cdata)) {
 				result.toString = function toString() {
-					return (this.__text ? this.__text : '') + (this.__cdata ? this.__cdata : '');
+					return (this[config.textAttribute] ? this[config.textAttribute] : '') + (this.__cdata ? this.__cdata : '');
 				};
 			}
 
@@ -494,6 +498,7 @@
 			if ((config.arrayAccessForm === "property" && endsWith(propertyName.toString(), ("_asArray")))
 				|| propertyName.toString().indexOf(config.attributePrefix) === 0
 				|| propertyName.toString().indexOf("__") === 0
+				|| propertyName.toString() === config.textAttribute
 				|| (jsonObj[propertyName] instanceof Function))
 				return true;
 			else
@@ -537,11 +542,11 @@
 				result += "<![CDATA[" + textNode.__cdata + "]]>";
 			}
 
-			if (textNode.__text || typeof (textNode.__text) === 'number' || typeof (textNode.__text) === 'boolean') {
+			if (textNode[config.textAttribute] || typeof (textNode[config.textAttribute]) === 'number' || typeof (textNode[config.textAttribute]) === 'boolean') {
 				if (config.escapeMode)
-					result += escapeXmlChars(textNode.__text);
+					result += escapeXmlChars(textNode[config.textAttribute]);
 				else
-					result += textNode.__text;
+					result += textNode[config.textAttribute];
 			}
 
 			return result;
@@ -599,7 +604,7 @@
 					result += serializeEndTag(element, elementName);
 				} else {
 					var childElementCount = getDataElementCount(element);
-					if (childElementCount > 0 || typeof (element.__text) === 'number' || typeof (element.__text) === 'boolean' || element.__text || element.__cdata) {
+					if (childElementCount > 0 || typeof (element[config.textAttribute]) === 'number' || typeof (element[config.textAttribute]) === 'boolean' || element[config.textAttribute] || element.__cdata) {
 						result += serializeStartTag(element, elementName, attributes, false);
 						result += serializeJavaScriptObjectChildren(element);
 						result += serializeEndTag(element, elementName);
